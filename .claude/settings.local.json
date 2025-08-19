@@ -5,7 +5,8 @@
       "Bash(docker logs:*)",
       "Bash(python manage.py makemigrations:*)",
       "Bash(python3 manage.py migrate:*)",
-      "Bash(rm:*)"
+      "Bash(rm:*)",
+      "Bash(docker restart:*)"
     ],
     "deny": [],
     "ask": []

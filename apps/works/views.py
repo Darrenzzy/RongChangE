@@ -13,7 +13,19 @@ from works.throttles import MedCaseUserRateThrottle
 
 
 class CaseViewSet(
-    GenericViewSet):
+    GenericViewSet,
+    mixins.CreateModelMixin,
+    mixins.ListModelMixin,
+):
+    authentication_classes = [RegisterDoctorAuthentication]
+    serializer_class = CreateCaseSerializer
+    queryset = Case.objects.all()
+    pagination_class = YmPageNumberPagination
+
+    def get_serializer_class(self):
+        return {"create": CreateCaseSerializer, "list": CaseAndMedCaseSerializer}.get(self.action, CreateCaseSerializer)
+
+    # def get_queryset(self):
     #     # to_do 待审核任务：读取后台状态：空
     #     # done 已审核：读取后台状态：已支付
     #     state = self.request.query_params.get("state")

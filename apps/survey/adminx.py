@@ -293,7 +293,7 @@ class CommitLogAdmin(object):
 
     def get_context(self):
         context = super().get_context()
-        if hasattr(self, 'org_obj'):
+        if hasattr(self, 'org_obj') and self.org_obj:
             _dt = self.org_obj.data
             if _dt:
                 for index, x in enumerate(_dt):  x["index"], x['kind'] = index + 1, kind_map.get(x['kind'])

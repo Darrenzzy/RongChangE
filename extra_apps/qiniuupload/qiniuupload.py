@@ -51,13 +51,24 @@ def get_token(key: str = None, policy: typing.Union[dict, typing.Any] = None):
     :rtype:     str
 
     """
-    q = Auth(settings.QINIU_ACCESS_KEY, settings.QINIU_SECRET_KEY)
+    # 检查七牛云配置是否有效
+    access_key = getattr(settings, 'QINIU_ACCESS_KEY', None)
+    secret_key = getattr(settings, 'QINIU_SECRET_KEY', None)
+    bucket_name = getattr(settings, 'QINIU_BUCKET_NAME', None)
+    
+    if not access_key or not secret_key or not bucket_name:
+        raise ImproperlyConfigured(
+            "Qiniu configuration is incomplete. Please set QINIU_ACCESS_KEY, "
+            "QINIU_SECRET_KEY, and QINIU_BUCKET_NAME in your settings."
+        )
+    
+    q = Auth(access_key, secret_key)
 
     # 3600为token过期时间，秒为单位。3600等于一小时
     policy = {
-        "scope": settings.QINIU_BUCKET_NAME
+        "scope": bucket_name
     } if not policy else None
-    return q.upload_token(settings.QINIU_BUCKET_NAME, key, 3600, policy=policy)
+    return q.upload_token(bucket_name, key, 3600, policy=policy)
 
 
 class QiniuUploader(forms.TextInput):
