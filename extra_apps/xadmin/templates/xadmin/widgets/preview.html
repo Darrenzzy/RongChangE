@@ -1,0 +1,100 @@
+<div class="modal fade" id="myModal" tabindex="-1" role="dialog" aria-hidden=”true” data-backdrop=”static”>
+    <div class="modal-dialog" role="document" style="padding-top: 10%">
+        <div style="position: relative; outline: none">
+            <div class="modal-body" style="text-align: center"></div>
+        </div>
+    </div>
+  </div>
+
+<input type="text" name="{{ widget.name }}" value="{{ widget.value|stringformat:'s' }}" autocomplete="off" class="url-field adminurlfieldwidget form-control" maxlength="{{ widget.attrs.maxlength }}" {% if widget.required %}required="{{widget.required}}"{% endif %}  id="{{ widget.attrs.id }}">
+
+{% comment %}
+<p style="margin-top: 5px"><img class="imgClass" style="cursor: zoom-in" src="{{ widget.value }}" width="300" height="225" alt=""></p>
+
+<script type="text/javascript">
+    $('.imgClass').click(function() {
+        $('.modal-body').html('')
+        $('.modal-body').append('<img class="imgModalClass" alt="" style="max-width: 800px;cursor: zoom-out" src='+ this.src +'>')
+        $('#myModal').modal({backdrop: 'static', show: true})
+    })
+
+    $(document).on('click', '.imgModalClass', function() {
+      $('#myModal').modal('hide')
+    })
+
+</script>
+{% endcomment %}
+
+{% comment %}
+<div id="image-preview-container" style="display: flex; flex-wrap: wrap; gap: 10px; margin-top: 5px">
+    {% for url in widget.value_slice %}
+        {% if forloop.counter <= 12 %}  <!-- 最多展示12张图片 -->
+{#            <img class="imgClass" style="cursor: pointer; object-fit: cover; width: 200px; height: 150px;"#}
+            <img class="imgClass" style="cursor: zoom-in;"  width="300" height="225"
+                 src="{{ url }}" alt="{{ forloop.counter0 }}_{{ url }}">
+        {% endif %}
+    {% endfor %}
+</div>
+
+<script type="text/javascript">
+    $('.imgClass').click(function () {
+
+        {% for url in  widget.value_slice %}
+            $('.modal-body').append('<img class="imgModalClass" alt="'+ {{ forloop.counter0 }}+'_'+'{{ url }}' +'" style="max-width: 800px;cursor: zoom-out" src="' + '{{ url }}' + '">');
+        {% endfor %}
+        $('#myModal').modal({backdrop: 'static', show: true});
+    });
+
+    $(document).on('click', '.imgModalClass', function () {
+        $('#myModal').modal('hide');
+    });
+</script>
+{% endcomment %}
+
+{% comment %}<div id="image-preview-container" style="display: flex; flex-wrap: wrap; gap: 10px; margin-top: 5px">
+  {% for url in widget.value_slice %}
+    {% if forloop.counter <= 12 %}
+      <img class="imgClass" style="cursor: pointer; object-fit: cover; width: 200px; height: 150px;"
+           src="{{ url }}" alt="{{ forloop.counter0 }}_{{ url }}"
+           data-url="{{ url }}">
+    {% endif %}
+  {% endfor %}
+</div>
+
+<script type="text/javascript">
+  $('.imgClass').click(function () {
+    $('.modal-body').empty(); // 清空modal-body的内容
+    $('.imgClass').each(function() { // 重新绑定点击事件
+      var imageUrl = $(this).data('url');
+      $('.modal-body').append('<img class="imgModalClass" alt="' + $(this).attr('alt') + '" style="max-width: 800px;cursor: zoom-out" src="' + imageUrl + '">');
+    });
+    $('#myModal').modal({backdrop: 'static', show: true});
+  });
+
+  $(document).on('click', '.imgModalClass', function () {
+    $('#myModal').modal('hide');
+  });
+</script>{% endcomment %}
+
+<div id="image-preview-container" style="display: flex; flex-wrap: wrap; gap: 10px; margin-top: 5px">
+  {% for url in widget.value_slice %}
+    {% if forloop.counter <= 12 %}
+      <img class="imgClass" style="cursor: pointer; object-fit: cover; width: 200px; height: 150px;"
+           src="{{ url }}" alt="{{ forloop.counter0 }}_{{ url }}">
+    {% endif %}
+  {% endfor %}
+</div>
+
+<script type="text/javascript">
+  $('.imgClass').click(function () {
+    $('.modal-body').empty(); // 清空modal-body的内容
+    var imageUrl = $(this).attr('src');
+    var altText = $(this).attr('alt');
+    $('.modal-body').append('<img class="imgModalClass" alt="' + altText + '" style="max-width: 800px;cursor: zoom-out" src="' + imageUrl + '">');
+    $('#myModal').modal({backdrop: 'static', show: true});
+  });
+
+  $(document).on('click', '.imgModalClass', function () {
+    $('#myModal').modal('hide');
+  });
+</script>

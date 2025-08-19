@@ -1,0 +1,47 @@
+{% extends base_template %}
+{% load i18n l10n %}
+
+{% load xadmin_tags %}
+
+{% block breadcrumbs %}
+    <ul class="breadcrumb">
+        <li><a href="{% url 'xadmin:index' %}">{% trans 'Home' %}</a></li>
+        <li><a href="{% url opts|admin_urlname:'changelist' %}">{{ opts.verbose_name_plural|capfirst }}</a></li>
+        <li>{% trans 'download multiple objects' %}</li>
+    </ul>
+{% endblock %}
+{% block nav_title %}{{ title }}{% endblock %}
+
+{% block content %}
+
+    <div class="alert alert-warning">{% blocktrans %} 您确认要下载被选中的 {{ objects_name }} {{ count }} 条数据
+        ? {% endblocktrans %}
+        <br>
+        <br>
+        {% if warnings_tip %}
+            <h4>
+                <pre><font color="#FF0000">{{ warnings_str }}</font></pre>
+            </h4>
+        {% endif %}
+
+    </div>
+
+    <form autocomplete="off" action="" method="post">
+        {% csrf_token %}
+        <div>
+            {#            <input autocomplete="off" type="hidden" name="{{ action_checkbox_name }}" value="0"/>#}
+            {% for obj in queryset %}
+                <input autocomplete="off" type="hidden" name="{{ action_checkbox_name }}" value="{{ obj|unlocalize }}"/>
+            {% endfor %}
+            <input autocomplete="off" type="hidden" name="action" value="批量导出表格数据"/>
+            <input autocomplete="off" type="hidden" name="download_ai" value="yes"/>
+            {% view_block 'form_fields' %}
+            <div class="form-actions well well-sm">
+                <input autocomplete="off" class="btn btn-danger btn-lg" type="submit" value="{% trans "Yes, I'm sure" %}"/>
+                <a class="btn btn-default pull-right"
+                   onclick="javascript:window.location.href='{{ cancel_link }}'">{% trans 'Cancel' %}</a>
+            </div>
+        </div>
+    </form>
+
+{% endblock %}

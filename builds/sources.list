@@ -1,0 +1,10 @@
+# for Debian 11 bullseye  && Python 3.*
+# for Debian 10 buster && Python 2.7 need to replace bullseye with buster
+deb https://mirror.sjtu.edu.cn/debian/ bullseye main non-free contrib
+deb https://mirror.sjtu.edu.cn/debian/ bullseye-backports main non-free contrib
+deb https://mirror.sjtu.edu.cn/debian/ bullseye-updates main non-free contrib
+deb https://mirror.sjtu.edu.cn/debian-security/ bullseye-security main non-free contrib
+deb-src https://mirror.sjtu.edu.cn/debian/ bullseye main non-free contrib
+deb-src https://mirror.sjtu.edu.cn/debian/ bullseye-backports main non-free contrib
+deb-src https://mirror.sjtu.edu.cn/debian/ bullseye-updates main non-free contrib
+deb-src https://mirror.sjtu.edu.cn/debian-security/ bullseye-security main non-free contrib

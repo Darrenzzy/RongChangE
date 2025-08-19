@@ -1,0 +1,272 @@
+import logging
+import typing
+
+from rest_framework import mixins
+from rest_framework.response import Response
+from rest_framework.viewsets import GenericViewSet
+
+from survey.models import DiseasesCategory, QuestionBank, Option, CommitLog
+from survey.serializers import ListDiseasesCategorySerializer, CreateQuestionBankSerializer, \
+    ListMyHistoryViewSetSerializer
+from utils.base import RegisterDoctorAuthentication
+from utils.throttle_cache_tools import check_throttle_limit_range
+from utils.tools import convert_array_to_dictionary
+from utils.ym_restframework.pagination import YmPageNumberPagination
+from vendor.abnormal.fmt_log_exception import fmt_error
+from works.models import WorksState
+
+log_except = logging.getLogger("except")
+
+
+# Create your views here.
+class DiseasesCategoryViewSet(
+    GenericViewSet,
+    mixins.ListModelMixin
+):
+    authentication_classes = [RegisterDoctorAuthentication]
+    serializer_class = ListDiseasesCategorySerializer
+    queryset = DiseasesCategory.objects.filter(is_use=True)
+
+
+class QuestionBankViewSet(
+    GenericViewSet,
+    mixins.RetrieveModelMixin,
+    mixins.CreateModelMixin,
+):
+    lookup_field = 'category_id'
+    authentication_classes = [RegisterDoctorAuthentication]
+    queryset = QuestionBank.objects.filter(category__is_use=True, is_use=True)
+    serializer_class = CreateQuestionBankSerializer
+    throttle_classes = []
+
+    def retrieve(self, request, *args, **kwargs):
+        lookup_url_kwarg = self.lookup_url_kwarg or self.lookup_field
+        filter_kwargs = {self.lookup_field: self.kwargs[lookup_url_kwarg]}
+
+        # 速率限制，params：
+        # 当前一分钟内最多请求5次该接口
+        is_wait, wait_throttle = check_throttle_limit_range(
+            throttle_key=[f"throttle:api:survey:question_retrieve:{request.user.pk}:{self.kwargs[lookup_url_kwarg]}"],
+            throttle_top=[3],
+            timeout=[60]
+        )
+        if is_wait:
+            return Response({"code": 400, "msg": "访问太过频繁了哦，请稍后再试", "data": []})
+
+        try:
+            queryset = self.queryset.filter(**filter_kwargs)
+        except ValueError:
+            return Response({"code": 400, "msg": "参数异常", "data": []})
+
+        if not queryset.exists():
+            return Response({"code": 400, "msg": "题库不足，请联系管理员完善题库", "data": []})
+
+        target_ids = []
+        # 单选：3
+        single = queryset.filter(kind='S').order_by('?').values_list('id', flat=True)[:3]
+        if single:
+            target_ids.extend(single)
+        # 多选：3
+        multiple = queryset.filter(kind='D').order_by('?').values_list('id', flat=True)[:3]
+        if multiple:
+            target_ids.extend(multiple)
+        # 排序：2
+        sort = queryset.filter(kind='T').order_by('?').values_list('id', flat=True)[:2]
+        if sort:
+            target_ids.extend(sort)
+        # 评分：2
+        score = queryset.filter(kind='P').order_by('?').values_list('id', flat=True)[:2]
+        if score:
+            target_ids.extend(score)
+
+        target_lens = len(target_ids)
+        diff_value = 10 - target_lens
+        if diff_value > 0:
+            _base = queryset
+            if target_lens > 0:
+                _base = _base.exclude(id__in=target_ids)
+            target_ids.extend(_base.order_by('?').values_list('id', flat=True)[:diff_value])
+            target_lens = len(target_ids)
+
+        if target_lens > 0:
+            question = queryset.filter(id__in=target_ids).values("id", "scope", "kind", "title")
+            options = (Option.objects.filter(question_id__in=target_ids).order_by("-order", "pk")
+                       .values("id", "question_id", "title"))
+            option_map = convert_array_to_dictionary(array=options, target_key_name='question_id', drop_target_key=True)
+            return Response({
+                "code": 200, "msg": "success",
+                "data": [{**q, "options": option_map.get(q['id'], [])} for q in question]
+            })
+
+        return Response({"code": 400, "msg": "题库不足，请联系管理员完善题库", "data": []})
+
+    def create(self, request, *args, **kwargs):
+        _category = request.data.get('category', None)
+        if not _category:
+            return Response({"code": 400, "msg": "参数异常", "data": []})
+        try:
+            _category = int(_category)
+        except ValueError:
+            return Response({"code": 400, "msg": "参数异常", "data": []})
+
+        # 速率限制，params：
+        # 当前x分钟内最多请求x次该接口
+        is_wait, wait_throttle = check_throttle_limit_range(
+            throttle_key=[
+                f"throttle:api:survey:question_create:{_category}:{request.user.pk}",
+                f"throttle:api:survey:question_create_10:{_category}:{request.user.pk}"
+            ],
+            throttle_top=[1, 5],
+            timeout=[1, 60]
+        )
+        if is_wait:
+            return Response({"code": 400, "msg": "访问太过频繁了哦，请稍后再试", "data": []})
+
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        attrs = serializer.validated_data
+
+        category = attrs.get("category")
+        data = attrs.get("data")
+        try:
+            target: typing.List[typing.Dict[str, typing.Any]] = [
+                {
+                    "id": int(d['id']),
+                    "title": d['title'],
+                    "scope": d['scope'],
+                    "kind": d['kind'],
+                    "options": [
+                        {
+                            "id": int(o['id']),
+                            "title": o['title']
+                        }
+                        for o in d['options']
+                    ]
+                }
+                for d in data
+            ]
+        except (KeyError, ValueError):
+            return Response({"code": 400, "msg": "提交参数异常", "data": []})
+
+        # 校验题目
+        question_ids, option_ids = [], []
+        [
+            (
+                question_ids.append(x['id']),
+                option_ids.extend([y['id'] for y in x['options'] if y['id']])
+            )
+            for x in target
+        ]
+
+        question_map = {
+            x['id']: {'title': x['title'], 'kind': x['kind'], 'scope': x['scope']}
+            for x in QuestionBank.objects.filter(id__in=question_ids, category_id=category.pk, is_use=True).
+            values("id", "title", "kind", "scope")
+        }
+        option_base = Option.objects.filter(id__in=option_ids).values("id", "title", "question_id")
+
+        # 题目下的选项
+        quest_option_map = {}
+        for _o in option_base:
+            if _o['question_id'] in quest_option_map:
+                quest_option_map[_o['question_id']].append({"id": _o['id'], "title": _o['title']})
+            else:
+                quest_option_map[_o['question_id']] = [{"id": _o['id'], "title": _o['title']}]
+
+        option_map = {
+            x['id']: {"question_id": x['question_id'], "title": x['title']} for x in option_base
+        }
+
+        for _t in target:
+            _question = question_map.get(_t['id'])
+            if not _question:
+                return Response({"code": 400, "msg": "题目不存在", "data": []})
+
+            _t['title'] = _question['title']
+            _t['kind'] = _question['kind']
+            _t['scope'] = _question['scope']
+
+            # 评分题=单选， 排序题=填空题
+            # choices = (("S", "单选题"), ("D", "多选题"), ("P", "评分题"), ("T", "排序题")),
+            # 题目类型校验
+            this_options_lens = len(_t['options'])
+            match _t['kind']:
+                case 'S':
+                    if this_options_lens != 1:
+                        return Response({"code": 400, "msg": "单选题只能有一个选项", "data": []})
+                case 'D':
+                    if this_options_lens < 1:
+                        return Response({"code": 400, "msg": "多选题至少需要一个选项", "data": []})
+                case 'P':
+                    if this_options_lens != 1:
+                        return Response({"code": 400, "msg": "评分题只能有一个选项", "data": []})
+                case 'T':
+                    if this_options_lens != 1:
+                        return Response({"code": 400, "msg": "排序题只能回复一个选项内容", "data": []})
+                    if _t['options'][0].get("id") != 0:
+                        return Response({"code": 400, "msg": "排序题的选项id必须为0", "data": []})
+                case _:
+                    return Response({"code": 400, "msg": "题目类型错误", "data": []})
+
+            # 获取当前题目下的所有选项列表
+            current_options = {oo['id']: oo['title'] for oo in quest_option_map.get(_t['id'], [])}
+            if _t['kind'] != 'T':  # 排序题=填空题
+                for y in _t['options']:
+                    # 先判断提交的选项是否属于当前题目
+                    if not current_options.get(y['id']):
+                        return Response({"code": 400, "msg": "选项不存在", "data": []})
+
+                    _option = option_map.get(y['id'])
+                    if not _option:
+                        return Response({"code": 400, "msg": "选项不存在", "data": []})
+
+                    y['title'] = _option['title']
+                    y['question_id'] = _option['question_id']
+                    if _option['question_id'] != _t['id']:
+                        return Response({"code": 400, "msg": "选项不属于题目", "data": []})
+
+        try:
+            current_user = request.user
+            CommitLog.objects.create(
+                category_id=category.pk,
+                user_id=current_user.pk,
+                hospital=current_user.hospital,
+                phone=current_user.phone,
+                data=target,
+            )
+        except Exception as e:
+            fmt_error(
+                log_except, title=f"调研问卷提交失败", e=e,
+                other={"attrs": attrs, "target": target, "category": category.pk},
+                tag=["调研问卷提交", '调研问卷提交失败'],
+                request=request
+            )
+            return Response({"code": 400, "msg": "提交失败", "data": []})
+        return Response({"code": 200, "msg": "success", "data": []})
+
+
+class MyHistoryViewSet(GenericViewSet, mixins.ListModelMixin):
+    """
+    我的调研问卷
+    """
+
+    queryset = CommitLog.objects.all()
+    authentication_classes = [RegisterDoctorAuthentication]
+    serializer_class = ListMyHistoryViewSetSerializer
+    pagination_class = YmPageNumberPagination
+
+    def get_queryset(self):
+        base = CommitLog.objects.filter(
+            user_id=self.request.user.pk, category__is_use=True
+        ).order_by("-pk")
+
+        # to_do 待审核任务：读取后台状态：空
+        # done 已审核：读取后台状态：已支付
+        state = self.request.query_params.get("state")
+        if state == "to_do":
+            return base.filter(state_id__isnull=True)
+        elif state == "done":
+            done_cate = WorksState.objects.filter(title="已支付").first()
+            return base.filter(state_id=done_cate.pk) if done_cate else base.none()
+        else:
+            return base.none()

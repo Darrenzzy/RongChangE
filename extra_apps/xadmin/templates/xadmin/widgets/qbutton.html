@@ -1,0 +1,53 @@
+{% extends "xadmin/widgets/base.html" %}
+{% load i18n xadmin_tags %}
+
+{% block content %}
+<div class="row">
+  {% for btn in btns %}
+  <div class="col-xs-6 col-sm-4 col-md-3">
+  {% if btn.type == 'upload' %}
+
+  <a data-toggle="modal" data-target="#export-modal-import-excel" class="btn btn-primary btn-quick">
+    <i class="{% if btn.icon %}{{btn.icon}}{%else%}fa fa-rocket{% endif %}"></i>
+    <p>{{ btn.title }}</p>
+  </a>
+  <div id="export-modal-import-excel" class="modal fade">
+      <div class="modal-dialog">
+          <div class="modal-content">
+              <form autocomplete="off" method="post" action="{{ btn.settings.url }}" enctype="multipart/form-data">
+                  {% csrf_token %}
+                  <div class="modal-header">
+                      <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+                      <h4 class="modal-title">{{ btn.settings.title }}</h4>
+                  </div>
+                  <div class="modal-body">
+                      <input autocomplete="off" type="file" name="file" onchange="fileChange()" id="submit_upload">
+                  </div>
+                  <div class="modal-footer">
+                      <button type="button" class="btn btn-default" data-dismiss="modal">{% trans "Close" %}</button>
+                      <button class="btn btn-success" type="submit" id="submit_upload_b" disabled="disabled">
+                        <i class="icon-share"></i>导入
+                      </button>
+                  </div>
+              </form>
+          </div><!-- /.modal-content -->
+      </div><!-- /.modal-dalog -->
+  </div><!-- /.modal -->
+  <script>
+  function fileChange() {
+    var filename = $('#submit_upload').val();
+    if (filename !== '') {
+      $('#submit_upload_b').attr('disabled', false);
+    }
+  }
+  </script>
+  {% else %}
+  <a href="{{ btn.url }}" class="btn btn-primary btn-quick">
+    <i class="{% if btn.icon %}{{btn.icon}}{%else%}fa fa-rocket{% endif %}"></i>
+    <p>{{ btn.title }}</p>
+  </a>
+  {% endif %}
+  </div>
+  {% endfor %}
+</div>
+{% endblock content %}

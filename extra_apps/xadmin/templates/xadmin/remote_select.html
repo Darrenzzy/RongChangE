@@ -1,0 +1,81 @@
+<input id="select_{{ name }}" data-processed="0" type="text"
+       data-external-plugin-resources="{{ external_plugin_resources }}" data-id="{{ id }}" style="display: none"
+       input-type="text" value="{{ value }}">
+<select id="remote_select" name="{{ name }}">
+
+</select>
+
+<script>
+    {#{ "list":[  {"id":1, "name": ""}, ] }#}
+
+    $(function () {
+        $('#remote_select').selectize({
+            valueField: 'url',
+            labelField: 'name',
+            searchField: 'name',
+            valueField: "id",
+            options: [],
+            create: false,
+            load: function (query, callback) {
+                console.log(query)
+                if (!query.length) return callback();
+                $.ajax({
+                    url: "{{ api_uri }}?search=" + encodeURIComponent(query),
+                    type: 'GET',
+                    dataType: 'json',
+                    error: function () {
+                        callback();
+                    },
+                    success: function (res) {
+                        var remoteSelect = $('#remote_select').selectize()[0].selectize
+                        remoteSelect.clearOptions()
+                        res.list.forEach((a) => {
+                            remoteSelect.addOption({title: a.name, value: a.id, id: a.id, name: a.name});
+                        })
+                        remoteSelect.refreshOptions()
+                    }
+                });
+            }
+        })
+        {#getData()#}
+        var val = $("#select_{{ name }}").val()
+        if (val) {
+            getDataFromID(val);
+        }
+    })
+
+    function getDataFromID(id) {
+        {#{"data":{"id":1, "name":""}}#}
+        $.ajax(
+            {
+                url: "{{ api_uri }}?pk=" + id,
+                dataType: 'json',
+                type: 'GET',
+                error: function () {
+                },
+                success: function (res) {
+                    var remoteSelect = $('#remote_select').selectize()[0].selectize
+                    remoteSelect.clearOptions()
+
+                    if (Array.isArray(res.list)) {
+                        res.list.forEach((a) => {
+                            remoteSelect.addOption({title: a.name, value: a.id, id: a.id, name: a.name});
+                        })
+
+                    } else {
+                        remoteSelect.addOption({
+                            title: res.list.name,
+                            value: res.list.id,
+                            id: res.list.id,
+                            name: res.list.name
+                        });
+                    }
+
+                    remoteSelect.setValue(id, true);
+                    remoteSelect.refreshOptions();
+                }
+            })
+    }
+
+
+</script>

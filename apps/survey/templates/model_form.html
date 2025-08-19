@@ -1,0 +1,55 @@
+{% extends base_template %}
+{% load i18n %}
+
+{% load xadmin_tags %}
+{% load crispy_forms_tags %}
+
+{% block bodyclass %}{{ opts.app_label }}-{{ opts.object_name.lower }} change-form{% endblock %}
+
+{% block nav_title %}{% if model_icon %}<i class="{{model_icon}}"><sub class="fa fa-{% if add%}plus{%else%}pencil{%endif%}"></sub></i> {% endif %}
+{{ title }}{% endblock %}
+
+{% block content %}
+<form autocomplete="off" class="exform" {% if has_file_field %}enctype="multipart/form-data" {% endif %}action="{{ form_url }}" method="post" id="{{ opts.model_name }}_form">{% csrf_token %}
+  {% block form_top %}{% endblock %}
+  {% view_block 'form_top' %}
+
+  {% if errors %}
+      <div class="alert alert-danger alert-dismissable">
+        <button type="button" class="close" data-dismiss="alert">&times;</button>
+      {% blocktrans count counter=errors|length %}Please correct the error below.{% plural %}Please correct the errors below.{% endblocktrans %}
+      </div>
+  {% endif %}
+
+  {% view_block 'before_fieldsets' %}
+
+  {% crispy form %}
+
+  <div class="control panel-body ">
+      <h2 class="question-title">用户调研详情</h2>
+    {% for question in commit_log_json %}
+        <div class="question">
+            <h3>#{{ question.index }}</h3>
+            <p>类型: {{ question.kind }}</p>
+            <p>范围: {{ question.scope }}</p>
+            <p>标题: {{ question.title }}</p>
+            <h4>用户答案:</h4>
+            <ul>
+                {% for option in question.options %}
+                    <li>{{ option.title }}{% if option.question_id %} (问题ID: {{ option.question_id }}){% endif %}</li>
+                {% empty %}
+                    <li>无选项</li>
+                {% endfor %}
+            </ul>
+        </div>
+        <hr>
+    {% empty %}
+        <p>没有调研数据。</p>
+    {% endfor %}
+  </div>
+
+  {% view_block 'after_fieldsets' %}
+
+  {% block submit_buttons_bottom %}{% include "xadmin/includes/submit_line.html" %}{% endblock %}
+</form>
+{% endblock %}

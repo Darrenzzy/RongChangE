@@ -1,0 +1,15 @@
+django-crispy-forms>=1.9.2
+crispy_bootstrap3
+
+django-import-export==3.3.5
+django-reversion==5.0.9
+django-formtools==2.5.1
+httplib2>=0.22.0
+six>=1.16.0
+future>=0.18.3
+qiniu>=7.13.0
+XlsxWriter>=3.1.9
+pandas>=2.1.4
+
+# data encrypt
+pycryptodomex>=3.19.1

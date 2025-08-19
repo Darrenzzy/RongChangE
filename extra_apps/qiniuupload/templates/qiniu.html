@@ -1,0 +1,97 @@
+{% load static %}
+<div class="django-location-widget" data-field-id="{{ id }}" style="display: inline-block;">
+    <input{{ final_attrs }} data-processed="0" type="text" autocomplete="off"
+                            data-external-plugin-resources="{{ external_plugin_resources }}" data-id="{{ id }}"
+                            input-type="qiniu" value="{{ value }}">
+    <input autocomplete="off" type="file" class="bt_select_file" value="选择上传" btid="{{ id }}">
+</div>
+<p id="qiniu_upload_message" class="qiniu-upload-message-hidden"></p>
+
+<style>
+    .django-location-widget {
+        width: 100%;
+        display: flex;
+    }
+
+    .django-location-widget input {
+        max-width: 300px;
+        float: left;
+        height: 34px;
+    }
+
+    #bt_select_location {
+        margin-left: 15px;
+    }
+
+    .qiniu-upload-message-hidden {
+        display: none
+    }
+</style>
+<script src="/static/js/qiniu.min.js"></script>
+<script>
+    var token = "";
+    var timestamp = new Date().getTime();
+
+    $(".bt_select_file").change(function (a) {
+
+        var btid = a.target.getAttribute("btid");
+        var file = this.files[0];
+        {#let key = 'media/' + timestamp + '/' + file.name#}
+        let key = '{{ upload_to }}' + timestamp + '/' + file.name;
+
+        {#console.log(a)#}
+        const putExtra = {
+            fname: key,
+
+        };
+
+        if (!$('#qiniu_upload_message').hasClass('qiniu-upload-message-hidden')) {
+            $('#qiniu_upload_message').addClass('qiniu-upload-message-hidden')
+        }
+
+        var token = "{{ qiniu_token }}"
+        const startTimestamp = new Date().getTime()
+        const observable = qiniu.upload(file, key, token, putExtra, null)
+        const observer = {
+            next(data) {
+                if ($('#qiniu_upload_message').hasClass('qiniu-upload-message-hidden')) {
+                    $('#qiniu_upload_message').removeClass('qiniu-upload-message-hidden')
+                }
+                const currentTimestamp = new Date().getTime()
+                const currentCostSeconds = (currentTimestamp - startTimestamp) / 1000
+                $('#qiniu_upload_message').html(`<span class="text-info">当前上传进度：${Math.floor(data.total.percent * 100) / 100}%（已耗时 ${Math.floor(currentCostSeconds * 100) / 100}秒）</span>`)
+            },
+            error(err) {
+                if ($('#qiniu_upload_message').hasClass('qiniu-upload-message-hidden')) {
+                    $('#qiniu_upload_message').removeClass('qiniu-upload-message-hidden')
+                }
+                $('#qiniu_upload_message').html(`<span class="text-danger">上传失败！</span>`)
+            },
+            complete(res) {
+                const tagSelector = "input[data-id='" + btid + "']"
+                const fileQiniuCloudUrl = "{{ qiniu_domain }}" + res.key
+                $(tagSelector).val(fileQiniuCloudUrl);
+                const completeTimestamp = new Date().getTime()
+                const costSeconds = (completeTimestamp - startTimestamp) / 1000
+                if ($('#qiniu_upload_message').hasClass('qiniu-upload-message-hidden')) {
+                    $('#qiniu_upload_message').removeClass('qiniu-upload-message-hidden')
+                }
+                $('#qiniu_upload_message').html(`<span class="text-success">耗时 ${Math.floor(costSeconds * 100) / 100} 秒，上传成功！</span>`)
+            }
+        }
+        const subscription = observable.subscribe(observer) // 上传开始
+
+
+// or
+    });
+
+    function savedata(a, b) {
+
+    }
+
+    function saveDataList(lon_lat) {
+        layer.closeAll();
+
+        $("input[input-type='location']").val(lon_lat);
+    }
+</script>

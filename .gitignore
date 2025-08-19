@@ -1,0 +1,56 @@
+# ---> Python
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+.idea/
+workspace.xml
+vcs.xml
+
+# C extensions
+*.so
+
+# Distribution / packaging
+.Python
+env/
+venv/
+
+
+# Unit test / coverage reports
+htmlcov/
+.tox/
+.coverage
+.coverage.*
+.cache
+.env
+nosetests.xml
+coverage.xml
+*,cover
+
+# Translations
+# *.mo
+*.pot
+
+# Django stuff:
+*.log
+
+# Sphinx documentation
+docs/_build/
+
+# PyBuilder
+target/
+
+# media
+media/
+
+deploy.py
+
+bin/
+
+mp/
+
+
+
+.vscode/
+logs/
+log/
