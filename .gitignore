@@ -14,7 +14,7 @@ vcs.xml
 .Python
 env/
 venv/
-
+.DS_Store
 
 # Unit test / coverage reports
 htmlcov/
