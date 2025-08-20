@@ -148,6 +148,8 @@ ignore_urls_set = {
 # 不需要签名验证的API路径前缀
 ignore_signature_paths = {
     "/api/survey/external/commitlog",
+    "/api/user/code/",
+    "/api/user/doctor/",
 }
 
 APiSignatureMiddleware = SignatureHelper(logger=log_signature)

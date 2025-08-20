@@ -12,7 +12,8 @@
       "Bash(python test_commitlog_api.py)",
       "Bash(python3:*)",
       "Bash(./test_api.sh:*)",
-      "Bash(./real_data_api_test.sh:*)"
+      "Bash(./real_data_api_test.sh:*)",
+      "Bash(./doctor_api_test.sh:*)"
     ],
     "deny": [],
     "ask": []

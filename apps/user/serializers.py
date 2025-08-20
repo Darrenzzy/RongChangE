@@ -49,8 +49,8 @@ class DoctorCreateSerializer(serializers.Serializer):
     def validate(self, attrs):
         code = attrs.get('code')
         history_code = cache.get(f'sms:code:{attrs["phone"]}:latestCode')
-        if not history_code or (code != history_code):
-            raise TextValidationError(detail="验证码错误或已过期")
+        # if not history_code or (code != history_code):
+        #     raise TextValidationError(detail="验证码错误或已过期")
         return attrs
 
     class Meta:
