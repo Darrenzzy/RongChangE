@@ -110,11 +110,11 @@ class DoctorAdmin(object):
 
             records = {
                 "func": doctor_parse_import_func,
-                "fields": ["序号", "医生姓名（必填）", "省份", "大区", "片区", "所属医院（必填）", "身份证号码",
+                "fields": ["序号", "医生姓名（必填）", "省份", "大区", "片区", "所属医院", "身份证号码",
                            "有效手机号码（必填：身份唯一标识，务必与后期注册手机号码保持一致）",
                            "银行", "银行卡号", "开户行名称"],
                 "dtype": {"序号": str, "医生姓名（必填）": str, "省份": str, "大区": str, "片区": str,
-                          "所属医院（必填）": str, "身份证号码": str,
+                          "所属医院": str, "身份证号码": str,
                           "有效手机号码（必填：身份唯一标识，务必与后期注册手机号码保持一致）": str, "银行": str,
                           "银行卡号": str, "开户行名称": str, },
             }
@@ -178,7 +178,7 @@ def doctor_parse_import_func(
         else:
             doctors.append(
                 Doctor(
-                    phone=_phone, name=row_dict.get('医生姓名（必填）'), hospital=row_dict.get('所属医院（必填）'),
+                    phone=_phone, name=row_dict.get('医生姓名（必填）'), hospital=row_dict.get('所属医院'),
                     province=row_dict.get('省份'), region=row_dict.get('大区'), precinct=row_dict.get('片区'),
                     bank=row_dict.get('银行'), bank_card_number=row_dict.get('银行卡号'),
                     card_number=row_dict.get('身份证号码'), bank_operation_name=row_dict.get('开户行名称')
@@ -191,7 +191,7 @@ def doctor_parse_import_func(
         # '省份': '',
         # '大区': '',
         # '片区': '',
-        # '所属医院（必填）': '',
+        # '所属医院': '',
         # '有效手机号码（必填：身份唯一标识，务必与后期注册手机号码保持一致）': ''
         # }
         # print(f"row_dict={row_dict}")

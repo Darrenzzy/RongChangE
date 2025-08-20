@@ -193,3 +193,70 @@ class ListMyHistoryViewSetSerializer(serializers.ModelSerializer):
     class Meta:
         model = CommitLog
         fields = ["id", "category", "created_at", ]
+
+
+class CreateCommitLogSerializer(serializers.ModelSerializer):
+    """
+    外部API提交调研记录的序列化器
+    """
+    category_id = serializers.IntegerField(help_text="疾病分类ID")
+    user_id = serializers.IntegerField(help_text="医生用户ID")
+    hospital = serializers.CharField(max_length=100, required=False, allow_blank=True, help_text="医院名称")
+    phone = serializers.CharField(max_length=11, required=False, allow_blank=True, help_text="手机号")
+    level_id = serializers.IntegerField(required=False, allow_null=True, help_text="劳务费档位ID")
+    state_id = serializers.IntegerField(required=False, allow_null=True, help_text="状态ID")
+    payment_time = serializers.DateTimeField(required=False, allow_null=True, help_text="支付时间")
+    payment_amount = serializers.DecimalField(
+        max_digits=10, decimal_places=2, required=False, default=0.00, help_text="支付金额"
+    )
+    data = serializers.JSONField(help_text="提交的答题数据")
+
+    class Meta:
+        model = CommitLog
+        fields = [
+            "category_id", "user_id", "hospital", "phone", "level_id", 
+            "state_id", "payment_time", "payment_amount", "data"
+        ]
+
+    def validate_category_id(self, value):
+        """验证疾病分类是否存在且启用"""
+        if not DiseasesCategory.objects.filter(id=value, is_use=True).exists():
+            raise serializers.ValidationError("疾病分类不存在或未启用")
+        return value
+
+    def validate_user_id(self, value):
+        """验证用户是否存在"""
+        from user.models import Doctor
+        if not Doctor.objects.filter(id=value).exists():
+            raise serializers.ValidationError("用户不存在")
+        return value
+
+    def validate_level_id(self, value):
+        """验证劳务费档位是否存在"""
+        if value is not None:
+            from agreement.models import LaborFeeLevel
+            if not LaborFeeLevel.objects.filter(id=value).exists():
+                raise serializers.ValidationError("劳务费档位不存在")
+        return value
+
+    def validate_state_id(self, value):
+        """验证状态是否存在"""
+        if value is not None:
+            from works.models import WorksState
+            if not WorksState.objects.filter(id=value).exists():
+                raise serializers.ValidationError("状态不存在")
+        return value
+
+    def create(self, validated_data):
+        """创建提交记录"""
+        return CommitLog.objects.create(
+            category_id=validated_data['category_id'],
+            user_id=validated_data['user_id'],
+            hospital=validated_data.get('hospital'),
+            phone=validated_data.get('phone'),
+            level_id=validated_data.get('level_id'),
+            state_id=validated_data.get('state_id'),
+            payment_time=validated_data.get('payment_time'),
+            payment_amount=validated_data.get('payment_amount', 0.00),
+            data=validated_data['data'],
+        )

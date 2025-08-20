@@ -7,7 +7,7 @@ from rest_framework.viewsets import GenericViewSet
 
 from survey.models import DiseasesCategory, QuestionBank, Option, CommitLog
 from survey.serializers import ListDiseasesCategorySerializer, CreateQuestionBankSerializer, \
-    ListMyHistoryViewSetSerializer
+    ListMyHistoryViewSetSerializer, CreateCommitLogSerializer
 from utils.base import RegisterDoctorAuthentication
 from utils.throttle_cache_tools import check_throttle_limit_range
 from utils.tools import convert_array_to_dictionary
@@ -270,3 +270,73 @@ class MyHistoryViewSet(GenericViewSet, mixins.ListModelMixin):
             return base.filter(state_id=done_cate.pk) if done_cate else base.none()
         else:
             return base.none()
+
+
+class CommitLogCreateViewSet(GenericViewSet, mixins.CreateModelMixin):
+    """
+    外部API提交调研记录
+    用于第三方系统直接向survey_commitlog表提交数据
+    """
+    serializer_class = CreateCommitLogSerializer
+    queryset = CommitLog.objects.all()
+    authentication_classes = []  # 移除认证要求
+    permission_classes = []      # 移除权限要求
+    
+    def create(self, request, *args, **kwargs):
+        """
+        提交调研记录数据到survey_commitlog表
+        
+        请求示例:
+        POST /api/survey/external/commitlog/
+        {
+            "category_id": 1,
+            "user_id": 1,
+            "hospital": "北京协和医院",
+            "phone": "13800138000",
+            "level_id": 1,
+            "state_id": 1,
+            "payment_time": "2024-08-20T10:00:00Z",
+            "payment_amount": 100.50,
+            "data": [
+                {
+                    "id": 1,
+                    "title": "题目标题",
+                    "scope": "调研范围",
+                    "kind": "S",
+                    "options": [
+                        {
+                            "id": 1,
+                            "title": "选项标题"
+                        }
+                    ]
+                }
+            ]
+        }
+        """
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        
+        try:
+            commit_log = serializer.save()
+            return Response({
+                "code": 200,
+                "msg": "提交成功",
+                "data": {
+                    "id": commit_log.id,
+                    "created_at": commit_log.created_at
+                }
+            }, status=201)
+        except Exception as e:
+            fmt_error(
+                log_except, 
+                title="外部API提交调研记录失败", 
+                e=e,
+                other={"request_data": request.data},
+                tag=["外部API", "调研记录提交失败"],
+                request=request
+            )
+            return Response({
+                "code": 400,
+                "msg": f"提交失败: {str(e)}",
+                "data": []
+            }, status=400)

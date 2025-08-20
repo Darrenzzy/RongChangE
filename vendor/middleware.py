@@ -145,6 +145,11 @@ ignore_urls_set = {
     "/api/",
 }
 
+# 不需要签名验证的API路径前缀
+ignore_signature_paths = {
+    "/api/survey/external/commitlog",
+}
+
 APiSignatureMiddleware = SignatureHelper(logger=log_signature)
 
 
@@ -185,6 +190,11 @@ class ApiSignatureMiddleware(MiddlewareMixin):
             raise SignatureInvalid('Invalid token .', request)
 
     def process_request(self, request: HttpRequest):
+        
+        # 检查是否是不需要签名验证的路径
+        for ignore_path in ignore_signature_paths:
+            if request.path.startswith(ignore_path.rstrip('/')):
+                return None
 
         survival = [
             target_url for target_url in ignore_urls_set if
