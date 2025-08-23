@@ -5,6 +5,7 @@ from user.views import (
     QiniuCloudTokenView,
     DoctorViewSet,
     UserSubscrebeView,
+    UserStatusView,
     WechatCallbackView,
 )
 
@@ -19,6 +20,8 @@ urlpatterns = [
     path(r'qiniuToken/', QiniuCloudTokenView.as_view(), name='qiniu_token'),
     # 查询用户是否已关注公众号
     path(r'subscribe/', UserSubscrebeView.as_view(), name='subscribe'),
+    # 查询用户状态
+    path(r'status/', UserStatusView.as_view(), name='user_status'),
     path(r'wechatCallback/', WechatCallbackView.as_view(), name='wechat_callback'),
 ]
 

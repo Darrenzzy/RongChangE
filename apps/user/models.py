@@ -26,12 +26,15 @@ class Doctor(BaseModel):
         max_length=50, verbose_name='开户行名称', db_comment='开户行名称', null=True, blank=True
     )
     name = models.CharField(max_length=10, verbose_name='医生姓名', db_comment='医生姓名')
+    gender = models.CharField(max_length=10, null=True, blank=True, verbose_name='性别', db_comment='性别')
+    birthday = models.DateField(null=True, blank=True, verbose_name='出生日期', db_comment='出生日期')
     hospital = models.CharField(max_length=30, null=True, blank=True, verbose_name='医院', db_comment='医院')
     province = models.CharField(max_length=30, null=True, blank=True, verbose_name='省份', db_comment='省份')
     region = models.CharField(max_length=30, null=True, blank=True, verbose_name='大区', db_comment='大区')
     precinct = models.CharField(max_length=30, null=True, blank=True, verbose_name='片区', db_comment='片区')
 
     pic = models.URLField(max_length=250, verbose_name='行医执照', db_comment='行医执照', null=True, blank=True)
+    sign_img = models.TextField(null=True, blank=True, verbose_name='签名图片', db_comment='签名图片')
     state = models.SmallIntegerField(verbose_name="认证状态", db_comment="认证状态", choices=STATE_CHOICES, default=0)
     cause = models.CharField(
         max_length=100, null=True, blank=True, verbose_name='审核不通过的原因', db_comment='审核不通过的原因'

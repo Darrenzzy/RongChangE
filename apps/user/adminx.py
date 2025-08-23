@@ -8,6 +8,7 @@ from django.contrib import messages
 from django.db.models import Case, When, Value, IntegerField
 from django.db.transaction import atomic
 from django.http import HttpResponseRedirect
+from django.utils.safestring import mark_safe
 from pandas import DataFrame
 
 from user.models import Doctor
@@ -23,11 +24,13 @@ log_except = logging.getLogger('except')
 @register(Doctor)
 class DoctorAdmin(object):
     list_display = ['id', 'openid', 'phone', 'name', 'province', 'state',
-                    'bank', 'bank_operation_name', 'get_mask_bank_card_number', 'get_mask_card_number', 'created_at']
+                    'bank', 'bank_operation_name', 'get_mask_bank_card_number', 'get_mask_card_number', 'get_sign_img_display', 'created_at']
     list_filter = ['state', 'last_login', 'is_subscribe', 'created_at']
     search_fields = ['phone', 'openid', 'name']
+    readonly_fields = ['get_sign_img_display']
     style_fields = {
         'pic': 'preview',
+        'sign_img': 'textarea',
     }
     list_exclude = ["hospital", 'region', 'precinct', ]
     ordering = ['custom_state']
@@ -58,6 +61,12 @@ class DoctorAdmin(object):
             return ''
         return f"{obj.card_number[:6]}{'*' * (len(obj.card_number) - 10)}{obj.card_number[-4:]}" if obj.card_number and len(
             obj.card_number) >= 18 else "******************"
+
+    @short_description("签名图片")
+    def get_sign_img_display(self, obj):
+        if obj.sign_img:
+            return mark_safe(f'<img src="{obj.sign_img}" style="max-width: 200px; max-height: 100px; border: 1px solid #ddd;" />')
+        return "无签名图片"
 
     def save_models(self):
         if self.org_obj is not None and 'state' in self.form_obj.changed_data:

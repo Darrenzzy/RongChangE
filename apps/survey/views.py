@@ -61,41 +61,17 @@ class QuestionBankViewSet(
         if not queryset.exists():
             return Response({"code": 400, "msg": "题库不足，请联系管理员完善题库", "data": []})
 
-        target_ids = []
-        # 单选：3
-        single = queryset.filter(kind='S').order_by('?').values_list('id', flat=True)[:3]
-        if single:
-            target_ids.extend(single)
-        # 多选：3
-        multiple = queryset.filter(kind='D').order_by('?').values_list('id', flat=True)[:3]
-        if multiple:
-            target_ids.extend(multiple)
-        # 排序：2
-        sort = queryset.filter(kind='T').order_by('?').values_list('id', flat=True)[:2]
-        if sort:
-            target_ids.extend(sort)
-        # 评分：2
-        score = queryset.filter(kind='P').order_by('?').values_list('id', flat=True)[:2]
-        if score:
-            target_ids.extend(score)
-
-        target_lens = len(target_ids)
-        diff_value = 10 - target_lens
-        if diff_value > 0:
-            _base = queryset
-            if target_lens > 0:
-                _base = _base.exclude(id__in=target_ids)
-            target_ids.extend(_base.order_by('?').values_list('id', flat=True)[:diff_value])
-            target_lens = len(target_ids)
-
-        if target_lens > 0:
-            question = queryset.filter(id__in=target_ids).values("id", "scope", "kind", "title")
-            options = (Option.objects.filter(question_id__in=target_ids).order_by("-order", "pk")
+        # 获取所有题目，不再限制数量
+        questions = queryset.values("id", "scope", "kind", "title").order_by('id')
+        
+        if questions:
+            question_ids = [q['id'] for q in questions]
+            options = (Option.objects.filter(question_id__in=question_ids).order_by("-order", "pk")
                        .values("id", "question_id", "title"))
             option_map = convert_array_to_dictionary(array=options, target_key_name='question_id', drop_target_key=True)
             return Response({
                 "code": 200, "msg": "success",
-                "data": [{**q, "options": option_map.get(q['id'], [])} for q in question]
+                "data": [{**q, "options": option_map.get(q['id'], [])} for q in questions]
             })
 
         return Response({"code": 400, "msg": "题库不足，请联系管理员完善题库", "data": []})
@@ -270,6 +246,87 @@ class MyHistoryViewSet(GenericViewSet, mixins.ListModelMixin):
             return base.filter(state_id=done_cate.pk) if done_cate else base.none()
         else:
             return base.none()
+
+
+class QuestionnaireDetailViewSet(GenericViewSet):
+    """
+    问卷详情接口 - 获取指定问卷分类下的所有问题
+    """
+    authentication_classes = [RegisterDoctorAuthentication]
+    
+    def retrieve(self, request, *args, **kwargs):
+        """
+        获取指定问卷分类下的所有问题和选项
+        
+        URL: GET /api/survey/questionnaire-detail/{category_id}/
+        """
+        category_id = kwargs.get('pk')
+        
+        try:
+            category_id = int(category_id)
+        except (ValueError, TypeError):
+            return Response({
+                "code": 400,
+                "msg": "问卷分类ID格式错误",
+                "data": []
+            })
+        
+        # 验证问卷分类是否存在且启用
+        category = DiseasesCategory.objects.filter(id=category_id, is_use=True).first()
+        if not category:
+            return Response({
+                "code": 400,
+                "msg": "问卷分类不存在或未启用",
+                "data": []
+            })
+        
+        # 获取该分类下所有启用的问题
+        questions = QuestionBank.objects.filter(
+            category_id=category_id,
+            is_use=True
+        ).values("id", "scope", "kind", "title").order_by('id')
+        
+        if not questions:
+            return Response({
+                "code": 400,
+                "msg": "该问卷暂无题目",
+                "data": []
+            })
+        
+        # 获取所有问题的选项
+        question_ids = [q['id'] for q in questions]
+        options = Option.objects.filter(
+            question_id__in=question_ids
+        ).values("id", "question_id", "title", "order").order_by("question_id", "-order", "pk")
+        
+        # 将选项按问题ID分组
+        from utils.tools import convert_array_to_dictionary
+        option_map = convert_array_to_dictionary(
+            array=options, 
+            target_key_name='question_id', 
+            drop_target_key=True
+        )
+        
+        # 组装响应数据
+        questionnaire_data = {
+            "category": {
+                "id": category.id,
+                "title": category.title
+            },
+            "questions": [
+                {
+                    **q,
+                    "options": option_map.get(q['id'], [])
+                }
+                for q in questions
+            ]
+        }
+        
+        return Response({
+            "code": 200,
+            "msg": "success",
+            "data": questionnaire_data
+        })
 
 
 class CommitLogCreateViewSet(GenericViewSet, mixins.CreateModelMixin):

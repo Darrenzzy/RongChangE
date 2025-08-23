@@ -19,7 +19,7 @@
 """
 from rest_framework.routers import SimpleRouter
 
-from survey.views import DiseasesCategoryViewSet, QuestionBankViewSet, MyHistoryViewSet, CommitLogCreateViewSet
+from survey.views import DiseasesCategoryViewSet, QuestionBankViewSet, MyHistoryViewSet, CommitLogCreateViewSet, QuestionnaireDetailViewSet
 
 router = SimpleRouter()
 
@@ -39,5 +39,9 @@ router.register('my-history', MyHistoryViewSet, basename='my-history')
 # 外部API提交调研记录
 # create
 router.register('external/commitlog', CommitLogCreateViewSet, basename='external-commitlog')
+
+# 问卷详情 - 获取指定问卷分类下的所有问题
+# retrieve
+router.register('questionnaire-detail', QuestionnaireDetailViewSet, basename='questionnaire-detail')
 
 urlpatterns = router.urls
